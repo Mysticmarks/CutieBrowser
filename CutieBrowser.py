@@ -54,6 +54,7 @@ class CutieBrowser(QMainWindow):
         nav_layout.addWidget(self.forward_button)
         nav_layout.addWidget(self.refresh_button)
         nav_layout.addWidget(self.home_button) # Add Home button to layout
+
         self.layout.addLayout(nav_layout) # Add nav buttons layout
 
         self.url_bar = QLineEdit()
@@ -101,6 +102,7 @@ class CutieBrowser(QMainWindow):
             self.forward_button.setEnabled(current_browser.page().action(QWebEnginePage.Forward).isEnabled())
             self.refresh_button.setEnabled(True)
             self.home_button.setEnabled(True)
+            self.refresh_button.setEnabled(True) # Refresh is always possible if there's a tab
         else:
             self.back_button.setEnabled(False)
             self.forward_button.setEnabled(False)
