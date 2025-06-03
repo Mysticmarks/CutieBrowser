@@ -18,6 +18,8 @@ class CutieBrowser(QMainWindow):
         self.setWindowTitle("Cutie Browser")
         self.setGeometry(100, 100, 800, 600)
 
+        self.DEFAULT_HOME_URL = "https://www.google.com"
+
         self.central_widget = QWidget()
         self.layout = QVBoxLayout()
         self.central_widget.setLayout(self.layout)
@@ -45,10 +47,14 @@ class CutieBrowser(QMainWindow):
         self.forward_button.clicked.connect(self.go_forward)
         self.refresh_button = QPushButton("R")
         self.refresh_button.clicked.connect(self.refresh_page)
+        self.home_button = QPushButton("Home") # Create Home button
+        self.home_button.clicked.connect(self.go_home) # Connect Home button
 
         nav_layout.addWidget(self.back_button)
         nav_layout.addWidget(self.forward_button)
         nav_layout.addWidget(self.refresh_button)
+        nav_layout.addWidget(self.home_button) # Add Home button to layout
+
         self.layout.addLayout(nav_layout) # Add nav buttons layout
 
         self.url_bar = QLineEdit()
@@ -79,16 +85,29 @@ class CutieBrowser(QMainWindow):
             logging.info("Refreshing page")
             current_browser.reload()
 
+    def go_home(self):
+        current_browser = self.tabs.currentWidget()
+        if current_browser:
+            logging.info(f"Navigating current tab to home page: {self.DEFAULT_HOME_URL}")
+            current_browser.setUrl(QUrl(self.DEFAULT_HOME_URL))
+        else:
+            logging.info("Home button clicked but no active tab to navigate.")
+            # Optionally, open a new tab with the home page if no tab is active
+            # self.add_tab(self.DEFAULT_HOME_URL)
+
     def update_navigation_buttons(self):
         current_browser = self.tabs.currentWidget()
         if current_browser:
             self.back_button.setEnabled(current_browser.page().action(QWebEnginePage.Back).isEnabled())
             self.forward_button.setEnabled(current_browser.page().action(QWebEnginePage.Forward).isEnabled())
+            self.refresh_button.setEnabled(True)
+            self.home_button.setEnabled(True)
             self.refresh_button.setEnabled(True) # Refresh is always possible if there's a tab
         else:
             self.back_button.setEnabled(False)
             self.forward_button.setEnabled(False)
             self.refresh_button.setEnabled(False)
+            self.home_button.setEnabled(False)
 
     def close_tab(self, index):
         logging.info(f"Closing tab at index {index}")
@@ -102,7 +121,8 @@ class CutieBrowser(QMainWindow):
         browser = QWebEngineView()
         browser.setPage(QWebEnginePage())
         browser.loadFinished.connect(lambda ok, b=browser: self.handle_load_finished(ok, b))
-        browser.page().urlChanged.connect(lambda url, browser=browser: self.update_url_bar(url, browser))
+        browser.page().urlChanged.connect(lambda url, b=browser: self.update_url_bar(url, b)) # Pass browser instance
+        browser.page().titleChanged.connect(lambda title, b=browser: self.handle_title_changed(title, b)) # Connect titleChanged
         browser.page().profile().downloadRequested.connect(self.download_requested)
 
         if url:
@@ -124,12 +144,21 @@ class CutieBrowser(QMainWindow):
             logging.info(f"URL modified to: {url}") # Log modification
         self.add_tab(url) # add_tab will log the specifics of adding the tab
 
-    def update_url_bar(self, url, browser):
-        index = self.tabs.indexOf(browser)
+    def update_url_bar(self, url, browser): # browser argument is kept for consistency if ever needed, but not used for tab text
+        # index = self.tabs.indexOf(browser) # No longer setting tab text here
         # It's possible the tab is closed before this callback, check index
-        if index != -1:
-            self.tabs.setTabText(index, url.toString())
+        # if index != -1:
+            # self.tabs.setTabText(index, url.toString()) # Removed: Tab text is handled by titleChanged
         self.url_bar.setText(url.toString())
+
+    def handle_title_changed(self, title, browser_instance):
+        index = self.tabs.indexOf(browser_instance)
+        if index != -1:
+            self.tabs.setTabText(index, title)
+            logging.info(f"Tab title changed to: {title} for tab index {index}")
+        else:
+            logging.warning(f"Could not find tab for title change: {title}")
+
 
     def download_requested(self, download):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*)")
@@ -170,6 +199,13 @@ class CutieBrowser(QMainWindow):
             QMessageBox.warning(self, "Load Error", f"Failed to load page: {page_url}. Please check the URL and your internet connection.")
         else:
             logging.info(f"Successfully loaded page: {page_url}")
+            # Fallback to set tab title if titleChanged didn't fire or for initial set
+            index = self.tabs.indexOf(browser_instance)
+            if index != -1:
+                page_title = browser_instance.page().title()
+                if page_title and page_title != "New Tab": # Avoid replacing "New Tab" if title is empty
+                    self.tabs.setTabText(index, page_title)
+                    logging.info(f"Tab title set on load finished: {page_title} for tab index {index}")
         self.update_navigation_buttons() # Update nav buttons after page load attempt
 
 

@@ -8,6 +8,10 @@ Cutie Browser is a simple, lightweight web browser built with Python and the PyQ
     *   Enhanced tab management:
         *   Dedicated 'New Tab' (+) button.
         *   Tabs are closable with an 'x' button.
+        *   Tab titles now display the actual web page title for better identification.
+*   Navigation controls:
+    *   Back, Forward, and Refresh buttons for web page navigation.
+    *   Home button to quickly navigate to a default homepage.
 *   Navigation controls:
     *   Back, Forward, and Refresh buttons for web page navigation.
 *   URL navigation with defaulting to HTTPS
